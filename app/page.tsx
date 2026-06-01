@@ -319,14 +319,14 @@ export default function Home() {
       <div className="game-container">
         <div className="game-content-wrapper">
           {/* Logo */}
-          <div className="game-logo">
+          <div className="game-logo animate-pop-in">
             <Image
               src="/images/logo.png"
               alt="Fix Your Ears"
-              width={280}
-              height={80}
+              width={800}
+              height={240}
               priority
-              className="w-[180px] md:w-[280px] h-auto"
+              className="h-32 md:h-48 object-contain"
             />
           </div>
 
@@ -347,12 +347,13 @@ export default function Home() {
             {/* Right: Character */}
             <div className="game-character-container">
               <div className="game-speech-bubble-wrapper animate-speech-bubble">
-                <div className="game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E]">
-                  <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+                <div className="game-speech-bubble" style={{ background: '#FFFFFF', boxShadow: '0px 4px 0px #5E5E5E', border: '3px solid #5E5E5E' }}>
+                  <p className="text-sm md:text-2xl font-bold text-center" style={{ color: '#5E5E5E' }}>
                     {reaction}
                   </p>
-                  <div className="game-speech-bubble-tail-outer" />
-                  <div className="game-speech-bubble-tail-inner" />
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -translate-y-1">
+                    <div className="w-0 h-0 border-l-8 md:border-l-12 border-r-8 md:border-r-12 border-t-8 md:border-t-12 border-l-transparent border-r-transparent" style={{ borderTopColor: '#FFFFFF' }}></div>
+                  </div>
                 </div>
               </div>
               <Image
@@ -375,13 +376,13 @@ export default function Home() {
       <div className="game-container">
         <div className="game-content-wrapper">
           {/* Logo */}
-          <div className="game-logo" style={{ marginBottom: "2rem" }}>
+          <div className="game-logo animate-pop-in">
             <Image
               src="/images/logo.png"
               alt="Fix Your Ears"
-              width={200}
-              height={60}
-              className="w-[140px] md:w-[200px] h-auto"
+              width={800}
+              height={240}
+              className="h-20 md:h-32 object-contain"
             />
           </div>
 
@@ -460,12 +461,20 @@ export default function Home() {
             <div className="game-character-container">
               {finalComment && (
                 <div className="game-speech-bubble-wrapper animate-speech-bubble">
-                  <div className={`game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] ${isThoughtBubble(finalReactionType) ? "thought-bubble" : ""}`}>
-                    <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+                  <div
+                    className={`game-speech-bubble ${isThoughtBubble(finalReactionType) ? "thought-bubble" : ""}`}
+                    style={{ background: '#FFFFFF', boxShadow: '0px 4px 0px #5E5E5E', border: '3px solid #5E5E5E' }}
+                  >
+                    <p className="text-sm md:text-2xl font-bold text-center" style={{ color: '#5E5E5E' }}>
                       {finalComment}
                     </p>
-                    <div className="game-speech-bubble-tail-outer" />
-                    {!isThoughtBubble(finalReactionType) && <div className="game-speech-bubble-tail-inner" />}
+                    {isThoughtBubble(finalReactionType) ? (
+                      <div className="game-speech-bubble-tail-outer" />
+                    ) : (
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -translate-y-1">
+                        <div className="w-0 h-0 border-l-8 md:border-l-12 border-r-8 md:border-r-12 border-t-8 md:border-t-12 border-l-transparent border-r-transparent" style={{ borderTopColor: '#FFFFFF' }}></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -491,13 +500,13 @@ export default function Home() {
       <audio ref={audioRef} />
       <div className="game-content-wrapper">
         {/* Logo */}
-        <div className="game-logo" style={{ marginBottom: "2rem" }}>
+        <div className="game-logo">
           <Image
             src="/images/logo.png"
             alt="Fix Your Ears"
-            width={200}
-            height={60}
-            className="w-[140px] md:w-[200px] h-auto"
+            width={800}
+            height={240}
+            className="h-20 md:h-32 object-contain"
           />
         </div>
 
@@ -633,13 +642,21 @@ export default function Home() {
 
           {/* Right: Character */}
           <div className="game-character-container">
-            <div className="game-speech-bubble-wrapper animate-speech-bubble" key={reaction}>
-              <div className={`game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] ${isThoughtBubble(reactionType) ? "thought-bubble" : ""}`}>
-                <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+            <div key={`bubble-${reaction}`} className="game-speech-bubble-wrapper animate-speech-bubble">
+              <div
+                className={`game-speech-bubble ${isThoughtBubble(reactionType) ? "thought-bubble" : ""}`}
+                style={{ background: '#FFFFFF', boxShadow: '0px 4px 0px #5E5E5E', border: '3px solid #5E5E5E' }}
+              >
+                <p className="text-sm md:text-2xl font-bold text-center" style={{ color: '#5E5E5E' }}>
                   {reaction}
                 </p>
-                <div className="game-speech-bubble-tail-outer" />
-                {!isThoughtBubble(reactionType) && <div className="game-speech-bubble-tail-inner" />}
+                {isThoughtBubble(reactionType) ? (
+                  <div className="game-speech-bubble-tail-outer" />
+                ) : (
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -translate-y-1">
+                    <div className="w-0 h-0 border-l-8 md:border-l-12 border-r-8 md:border-r-12 border-t-8 md:border-t-12 border-l-transparent border-r-transparent" style={{ borderTopColor: '#FFFFFF' }}></div>
+                  </div>
+                )}
               </div>
             </div>
             <Image
