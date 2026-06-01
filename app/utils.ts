@@ -31,40 +31,20 @@ export const triggerConfetti = () => {
   }, 250);
 };
 
-// Calculate accuracy percentage
-export const calculateAccuracy = (userInput: string, correctText: string): number => {
-  const userWords = userInput.toLowerCase().trim().split(/\s+/);
-  const correctWords = correctText.toLowerCase().trim().split(/\s+/);
-
-  if (correctWords.length === 0) return 0;
-
-  let correctCount = 0;
-  const maxLength = Math.max(userWords.length, correctWords.length);
-
-  for (let i = 0; i < maxLength; i++) {
-    if (userWords[i] === correctWords[i]) {
-      correctCount++;
-    }
-  }
-
-  return Math.round((correctCount / correctWords.length) * 100);
-};
-
-// Calculate Levenshtein distance for word-level comparison
-export const levenshteinDistance = (str1: string, str2: string): number => {
+// Levenshtein distance
+export function levenshteinDistance(a: string, b: string): number {
   const matrix: number[][] = [];
 
-  for (let i = 0; i <= str2.length; i++) {
+  for (let i = 0; i <= b.length; i++) {
     matrix[i] = [i];
   }
-
-  for (let j = 0; j <= str1.length; j++) {
+  for (let j = 0; j <= a.length; j++) {
     matrix[0][j] = j;
   }
 
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
@@ -76,19 +56,94 @@ export const levenshteinDistance = (str1: string, str2: string): number => {
     }
   }
 
-  return matrix[str2.length][str1.length];
+  return matrix[b.length][a.length];
+}
+
+// Calculate spelling score (0-100) based on Levenshtein distance
+export function calculateSpellingScore(userInput: string, correctWord: string): number {
+  const normalized = userInput.toLowerCase().trim();
+  const target = correctWord.toLowerCase().trim();
+
+  if (normalized === target) return 100;
+  if (normalized.length === 0) return 0;
+
+  const distance = levenshteinDistance(normalized, target);
+  const maxLen = Math.max(normalized.length, target.length);
+  const score = Math.max(0, Math.round((1 - distance / maxLen) * 100));
+
+  return score;
+}
+
+// Diff character type
+export type DiffChar = {
+  char: string;
+  status: "correct" | "wrong" | "missing" | "extra";
 };
 
-// Normalize text for comparison (remove punctuation, extra spaces, etc.)
-export const normalizeText = (text: string): string => {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
-    .replace(/\s+/g, " ") // Normalize spaces
-    .trim();
-};
+// Generate diff between user input and correct word using LCS
+export function generateDiff(userInput: string, correctWord: string): {
+  userDiff: DiffChar[];
+  correctDiff: DiffChar[];
+} {
+  const a = userInput.toLowerCase().trim();
+  const b = correctWord.toLowerCase().trim();
 
-// Check if texts match exactly (after normalization)
-export const isExactMatch = (userInput: string, correctText: string): boolean => {
-  return normalizeText(userInput) === normalizeText(correctText);
-};
+  // Build LCS table
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Backtrack to find the diff
+  const userDiff: DiffChar[] = [];
+  const correctDiff: DiffChar[] = [];
+  let i = m;
+  let j = n;
+
+  const userResult: DiffChar[] = [];
+  const correctResult: DiffChar[] = [];
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+      userResult.push({ char: a[i - 1], status: "correct" });
+      correctResult.push({ char: b[j - 1], status: "correct" });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      correctResult.push({ char: b[j - 1], status: "missing" });
+      j--;
+    } else {
+      userResult.push({ char: a[i - 1], status: "extra" });
+      i--;
+    }
+  }
+
+  userDiff.push(...userResult.reverse());
+  correctDiff.push(...correctResult.reverse());
+
+  return { userDiff, correctDiff };
+}
+
+// Get score color class
+export function getScoreColorClass(score: number): string {
+  if (score === 100) return "score-perfect";
+  if (score >= 85) return "score-excellent";
+  if (score >= 60) return "score-good";
+  return "score-bad";
+}
+
+// Create sentence with blank for the target word
+export function createSentenceWithBlank(sentence: string, word: string): string {
+  // Case-insensitive replacement of the word with blank
+  const regex = new RegExp(`\\b${word}\\b`, "i");
+  return sentence.replace(regex, "_____");
+}

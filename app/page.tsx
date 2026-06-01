@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Volume2, Trophy, RotateCcw } from "lucide-react";
-import { motion } from "framer-motion";
-import { Logo } from "./components/Logo";
-import { Character } from "./components/Character";
-import { SpeechBubble } from "./components/SpeechBubble";
-import { Button } from "./components/Button";
-import { Input } from "./components/Input";
-import { GamePanel } from "./components/GamePanel";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import {
-  SENTENCES,
-  TOTAL_SENTENCES_PER_GAME,
+  getTodaysWords,
+  TOTAL_WORDS_PER_GAME,
   SCORE_THRESHOLDS,
+  REACTION_IMAGES,
+  DEFAULT_IMAGE,
+  GOOD_REACTIONS,
+  BAD_REACTIONS,
   PERFECT_COMMENTS,
   EXCELLENT_COMMENTS,
   GOOD_COMMENTS,
@@ -21,157 +18,259 @@ import {
   FINAL_GOOD_COMMENTS,
   FINAL_BAD_COMMENTS,
   getRandomReaction,
-  GOOD_REACTIONS,
-  BAD_REACTIONS,
   type ReactionType,
-  type SentenceItem,
 } from "./constants";
-import { triggerConfetti, isExactMatch, calculateAccuracy } from "./utils";
+import {
+  triggerConfetti,
+  calculateSpellingScore,
+  generateDiff,
+  getScoreColorClass,
+  createSentenceWithBlank,
+} from "./utils";
 
 type GameState = "start" | "playing" | "finished";
-type Mood = "base" | "perfect" | "disappointed" | "laughing" | "unsatisfied" | "loss-for-words" | "drop-shoulders";
 
-const MOOD_MAP: Record<ReactionType, Mood> = {
-  perfect: "perfect",
-  base: "base",
-  disappointed: "disappointed",
-  "laughing-hard": "laughing",
-  unsatisfied: "unsatisfied",
-  "loss-for-words": "loss-for-words",
-  "drop-shoulders": "drop-shoulders",
+type RoundResult = {
+  word: string;
+  userAnswer: string;
+  accuracy: number;
+  meaning: string;
+  ja: string;
 };
+
+const OPENING_LINE = "I heard your listening skills are impressive. Let's see about that.";
 
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>("start");
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
-  const [score, setScore] = useState(0);
+  const [perfectCount, setPerfectCount] = useState(0);
   const [allScores, setAllScores] = useState<number[]>([]);
-  const [reaction, setReaction] = useState<string>("I heard your listening skills are terrible. Prove me wrong.");
+  const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
+  const [currentAccuracy, setCurrentAccuracy] = useState<number | null>(null);
+
+  const [reaction, setReaction] = useState<string>(OPENING_LINE);
   const [reactionType, setReactionType] = useState<ReactionType | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const [playsRemaining, setPlaysRemaining] = useState(2);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1.0);
+
   const [finalComment, setFinalComment] = useState<string | null>(null);
-  const [finalReactionType, setFinalReactionType] = useState<string | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [finalReactionType, setFinalReactionType] = useState<ReactionType | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const sentencesRef = useRef<SentenceItem[]>([]);
+  const audioUrlRef = useRef<string | null>(null);
+  const audioBlobRef = useRef<Blob | null>(null);
+  const preloadingRef = useRef(false);
 
-  // Initialize sentences on first render
-  if (sentencesRef.current.length === 0) {
-    const shuffled = [...SENTENCES].sort(() => Math.random() - 0.5);
-    sentencesRef.current = shuffled.slice(0, TOTAL_SENTENCES_PER_GAME);
-  }
+  const todaysWords = getTodaysWords();
+  const currentWord = todaysWords[currentWordIndex];
+  const averageScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
 
-  const currentSentence = sentencesRef.current[currentSentenceIndex];
-
-  const handleStart = () => {
-    setGameState("playing");
-    setReaction("Listen carefully and type what you hear.");
+  const revokeAudioUrl = () => {
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
   };
 
-  const playAudio = async () => {
-    if (playsRemaining <= 0 || isPlaying) return;
+  const stopAudioPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+    }
+    setIsPlaying(false);
+    revokeAudioUrl();
+  };
 
-    setIsPlaying(true);
-    setPlaysRemaining((prev) => prev - 1);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
+      }
+      revokeAudioUrl();
+    };
+  }, []);
 
+  // Preload audio when round changes
+  const preloadAudio = async (sentence: string) => {
+    if (preloadingRef.current) return;
+    preloadingRef.current = true;
     try {
       const response = await fetch("/api/synthesize", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: currentSentence.text,
-          rate: playbackRate,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sentence }),
       });
+      if (response.ok) {
+        audioBlobRef.current = await response.blob();
+      }
+    } catch (error) {
+      console.error("Preload failed:", error);
+    } finally {
+      preloadingRef.current = false;
+    }
+  };
 
-      if (!response.ok) {
-        throw new Error("Failed to synthesize speech");
+  useEffect(() => {
+    if (gameState === "playing" && currentWord) {
+      audioBlobRef.current = null;
+      preloadAudio(currentWord.sentence);
+    }
+  }, [gameState, currentWordIndex]);
+
+  const handleStart = () => {
+    setGameState("playing");
+    setReaction("Listen carefully, then spell the missing word.");
+  };
+
+  const playAudio = async () => {
+    if (!currentWord || playsRemaining <= 0 || isPlaying) return;
+
+    setIsPlaying(true);
+
+    try {
+      // Use preloaded blob if available, otherwise fetch
+      let audioBlob = audioBlobRef.current;
+      if (!audioBlob) {
+        const response = await fetch("/api/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: currentWord.sentence }),
+        });
+        if (!response.ok) throw new Error("Failed to synthesize speech");
+        audioBlob = await response.blob();
       }
 
-      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
       if (audioRef.current) {
+        revokeAudioUrl();
+        audioUrlRef.current = audioUrl;
         audioRef.current.src = audioUrl;
-        audioRef.current.playbackRate = playbackRate;
         await audioRef.current.play();
+        setPlaysRemaining((prev) => Math.max(prev - 1, 0));
 
         audioRef.current.onended = () => {
           setIsPlaying(false);
-          URL.revokeObjectURL(audioUrl);
         };
+
+        audioRef.current.onerror = () => {
+          setIsPlaying(false);
+        };
+      } else {
+        URL.revokeObjectURL(audioUrl);
+        setIsPlaying(false);
       }
     } catch (error) {
       console.error("Error playing audio:", error);
       setIsPlaying(false);
-      setReaction("Hmm, something went wrong. Try again.");
+      setReaction("Hmm, something went wrong with the audio. Try again.");
     }
   };
 
-  const handleSubmit = () => {
-    const correct = isExactMatch(userInput, currentSentence.text);
-    const accuracy = calculateAccuracy(userInput, currentSentence.text);
+  const handleSubmit = async () => {
+    if (showResult || !currentWord || !userInput.trim() || isProcessing) return;
 
-    setIsCorrect(correct);
+    stopAudioPlayback();
+    setIsProcessing(true);
+
+    const accuracy = calculateSpellingScore(userInput, currentWord.word);
+    const isPerfect = accuracy === 100;
+
     setAllScores((prev) => [...prev, accuracy]);
+    setRoundResults((prev) => [
+      ...prev,
+      {
+        word: currentWord.word,
+        userAnswer: userInput.trim(),
+        accuracy,
+        meaning: currentWord.meaning,
+        ja: currentWord.ja,
+      },
+    ]);
+    setCurrentAccuracy(accuracy);
 
-    if (correct) {
-      setScore((prev) => prev + 1);
+    if (isPerfect) {
+      setPerfectCount((prev) => prev + 1);
+      triggerConfetti();
     }
 
-    // Generate reaction based on accuracy
+    // Generate reaction - try API first, fallback to templates
     let comment = "";
-    let type: ReactionType | null = null;
+    let type: ReactionType;
 
-    if (accuracy === SCORE_THRESHOLDS.PERFECT) {
-      comment = PERFECT_COMMENTS[Math.floor(Math.random() * PERFECT_COMMENTS.length)];
-      type = "perfect";
-      triggerConfetti();
-    } else if (accuracy >= SCORE_THRESHOLDS.EXCELLENT) {
-      comment = EXCELLENT_COMMENTS[Math.floor(Math.random() * EXCELLENT_COMMENTS.length)];
-      type = "base";
-    } else if (accuracy >= SCORE_THRESHOLDS.GOOD) {
-      comment = GOOD_COMMENTS[Math.floor(Math.random() * GOOD_COMMENTS.length)];
-      type = getRandomReaction(GOOD_REACTIONS);
-    } else {
-      comment = BAD_COMMENTS[Math.floor(Math.random() * BAD_COMMENTS.length)];
-      type = getRandomReaction(BAD_REACTIONS);
+    try {
+      const reactionResponse = await fetch("/api/generate-reaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetWord: currentWord.word,
+          userAnswer: userInput.trim(),
+          accuracy,
+          meaning: currentWord.meaning,
+        }),
+      });
+
+      if (reactionResponse.ok) {
+        const data = await reactionResponse.json();
+        comment = data.message;
+        type = data.reactionType as ReactionType;
+      } else {
+        throw new Error("API failed");
+      }
+    } catch {
+      // Fallback to template comments
+      if (isPerfect) {
+        comment = PERFECT_COMMENTS[Math.floor(Math.random() * PERFECT_COMMENTS.length)];
+        type = "perfect";
+      } else if (accuracy >= SCORE_THRESHOLDS.EXCELLENT) {
+        comment = EXCELLENT_COMMENTS[Math.floor(Math.random() * EXCELLENT_COMMENTS.length)];
+        type = "base";
+      } else if (accuracy >= SCORE_THRESHOLDS.GOOD) {
+        comment = GOOD_COMMENTS[Math.floor(Math.random() * GOOD_COMMENTS.length)];
+        type = getRandomReaction(GOOD_REACTIONS);
+      } else {
+        comment = BAD_COMMENTS[Math.floor(Math.random() * BAD_COMMENTS.length)];
+        type = getRandomReaction(BAD_REACTIONS);
+      }
     }
 
     setReaction(comment);
     setReactionType(type);
     setShowResult(true);
+    setIsProcessing(false);
   };
 
   const handleNext = () => {
-    if (currentSentenceIndex < TOTAL_SENTENCES_PER_GAME - 1) {
-      setCurrentSentenceIndex((prev) => prev + 1);
+    stopAudioPlayback();
+
+    if (currentWordIndex < TOTAL_WORDS_PER_GAME - 1) {
+      setCurrentWordIndex((prev) => prev + 1);
       setUserInput("");
       setShowResult(false);
       setPlaysRemaining(2);
-      setReaction("Listen carefully and type what you hear.");
+      setCurrentAccuracy(null);
+      setReaction("Listen carefully, then spell the missing word.");
       setReactionType(null);
     } else {
       // Game finished
-      const avgScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-
+      const finalAvg = [...allScores].reduce((a, b) => a + b, 0) / allScores.length;
       let comment = "";
-      let type: ReactionType | null = null;
+      let type: ReactionType;
 
-      if (avgScore >= SCORE_THRESHOLDS.EXCELLENT) {
+      if (finalAvg >= SCORE_THRESHOLDS.EXCELLENT) {
         comment = FINAL_EXCELLENT_COMMENTS[Math.floor(Math.random() * FINAL_EXCELLENT_COMMENTS.length)];
         type = "perfect";
-        setShowConfetti(true);
         triggerConfetti();
-      } else if (avgScore >= SCORE_THRESHOLDS.GOOD) {
+      } else if (finalAvg >= SCORE_THRESHOLDS.GOOD) {
         comment = FINAL_GOOD_COMMENTS[Math.floor(Math.random() * FINAL_GOOD_COMMENTS.length)];
         type = "base";
       } else {
@@ -186,68 +285,83 @@ export default function Home() {
   };
 
   const handleRestart = () => {
-    const shuffled = [...SENTENCES].sort(() => Math.random() - 0.5);
-    sentencesRef.current = shuffled.slice(0, TOTAL_SENTENCES_PER_GAME);
-    setCurrentSentenceIndex(0);
+    stopAudioPlayback();
+    setCurrentWordIndex(0);
     setUserInput("");
-    setScore(0);
+    setPerfectCount(0);
     setAllScores([]);
+    setRoundResults([]);
+    setCurrentAccuracy(null);
     setGameState("start");
-    setReaction("I heard your listening skills are terrible. Prove me wrong.");
+    setReaction(OPENING_LINE);
     setReactionType(null);
     setShowResult(false);
     setPlaysRemaining(2);
-    setPlaybackRate(1.0);
     setFinalComment(null);
     setFinalReactionType(null);
-    setShowConfetti(false);
+    setIsProcessing(false);
   };
 
-  const getCurrentMood = (): Mood => {
-    if (!reactionType) return "base";
-    return MOOD_MAP[reactionType] || "base";
+  const getCharacterImage = (type: ReactionType | null): string => {
+    if (!type) return DEFAULT_IMAGE;
+    return REACTION_IMAGES[type] || DEFAULT_IMAGE;
   };
 
-  const getFinalMood = (): Mood => {
-    if (!finalReactionType) return "base";
-    return MOOD_MAP[finalReactionType as ReactionType] || "base";
+  const isThoughtBubble = (type: ReactionType | null): boolean => {
+    return type === "perfect";
   };
+
+  // ========== RENDER ==========
 
   // Start Screen
   if (gameState === "start") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 md:p-6">
-        <div className="max-w-6xl w-full">
+      <div className="game-container">
+        <div className="game-content-wrapper">
           {/* Logo */}
-          <div className="flex justify-center mb-6 md:mb-12">
-            <Logo size="large" />
+          <div className="game-logo">
+            <Image
+              src="/images/logo.png"
+              alt="Fix Your Ears"
+              width={280}
+              height={80}
+              priority
+              className="w-[180px] md:w-[280px] h-auto"
+            />
           </div>
 
-          {/* Character - Mobile (Top) */}
-          <div className="md:hidden mb-6 flex flex-col items-center gap-3">
-            <SpeechBubble message={reaction} className="max-w-xs" />
-            <div className="w-32">
-              <Character mood="base" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
-            {/* Start Button */}
-            <div className="flex justify-center md:justify-start">
-              <Button
-                onClick={handleStart}
-                variant="success"
-                size="large"
-                className="w-full max-w-md"
-              >
-                Start Game
-              </Button>
+          {/* Game Grid */}
+          <div className="game-grid">
+            {/* Left: Start Button */}
+            <div className="game-left-column">
+              <div className="game-action-area">
+                <button
+                  onClick={handleStart}
+                  className="btn-glossy btn-green text-lg md:text-xl px-8 md:px-12 py-4 md:py-5 animate-pop-in"
+                >
+                  Start Game
+                </button>
+              </div>
             </div>
 
-            {/* Character - Desktop (Right) */}
-            <div className="hidden md:flex flex-col items-center gap-6">
-              <SpeechBubble message={reaction} />
-              <Character mood="base" />
+            {/* Right: Character */}
+            <div className="game-character-container">
+              <div className="game-speech-bubble-wrapper animate-speech-bubble">
+                <div className="game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E]">
+                  <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+                    {reaction}
+                  </p>
+                  <div className="game-speech-bubble-tail-outer" />
+                  <div className="game-speech-bubble-tail-inner" />
+                </div>
+              </div>
+              <Image
+                src={DEFAULT_IMAGE}
+                alt="Character"
+                width={320}
+                height={320}
+                className="game-character-image animate-character"
+              />
             </div>
           </div>
         </div>
@@ -255,106 +369,113 @@ export default function Home() {
     );
   }
 
-  // Result Screen
+  // Finished Screen
   if (gameState === "finished") {
-    const avgScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-    const perfectCount = allScores.filter((s) => s === 100).length;
-
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
-        {/* Confetti Effect */}
-        {showConfetti && typeof window !== 'undefined' && (
-          <div className="fixed inset-0 pointer-events-none z-50">
-            {[...Array(50)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{
-                  x: Math.random() * window.innerWidth,
-                  y: -20,
-                  rotate: 0
-                }}
-                animate={{
-                  y: window.innerHeight + 20,
-                  rotate: 360,
-                  x: Math.random() * window.innerWidth
-                }}
-                transition={{
-                  duration: 3 + Math.random() * 2,
-                  repeat: Infinity,
-                  delay: Math.random() * 2
-                }}
-                className="absolute w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor: ['#4DC7FF', '#4ADE80', '#FF4A4A', '#FFE8CC'][Math.floor(Math.random() * 4)]
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        <div className="max-w-7xl w-full relative z-10">
+      <div className="game-container">
+        <div className="game-content-wrapper">
           {/* Logo */}
-          <div className="flex justify-center mb-4 md:mb-8">
-            <Logo size="small" />
+          <div className="game-logo" style={{ marginBottom: "2rem" }}>
+            <Image
+              src="/images/logo.png"
+              alt="Fix Your Ears"
+              width={200}
+              height={60}
+              className="w-[140px] md:w-[200px] h-auto"
+            />
           </div>
 
-          {/* Character & Feedback - Mobile (Top) */}
-          <div className="md:hidden mb-4 flex flex-col items-center gap-2">
-            {finalComment && <SpeechBubble message={finalComment} className="max-w-xs" />}
-            <div className="w-32">
-              <Character mood={getFinalMood()} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            {/* Results Panel */}
-            <div>
-              <GamePanel>
-                <div className="space-y-4 md:space-y-6">
-                  {/* Title */}
-                  <div className="flex items-center gap-3 pb-4 border-b-2 border-gray-200">
-                    <Trophy className="w-6 h-6 md:w-8 md:h-8 text-[var(--blue-dark)]" />
-                    <h2 className="text-xl md:text-2xl font-bold text-[var(--dark-gray)]">Results</h2>
-                  </div>
-
-                  {/* Perfect Count */}
-                  <div className="bg-gradient-to-br from-[var(--green-light)] to-[var(--green-dark)] text-white p-4 md:p-6 rounded-2xl border-[3px] border-[var(--dark-gray)] shadow-[4px_4px_0_0_var(--dark-gray)]">
-                    <div className="text-sm font-medium opacity-90">Perfect Scores</div>
-                    <div className="text-4xl md:text-5xl font-bold mt-2">
-                      {perfectCount}/{TOTAL_SENTENCES_PER_GAME}
-                    </div>
-                  </div>
-
-                  {/* Average Score */}
-                  <div className={`p-4 md:p-6 rounded-2xl border-[3px] border-[var(--dark-gray)] shadow-[4px_4px_0_0_var(--dark-gray)] ${
-                    avgScore >= 85 ? 'bg-gradient-to-br from-[var(--blue-light)] to-[var(--blue-dark)] text-white' :
-                    avgScore >= 70 ? 'bg-white text-[var(--dark-gray)]' :
-                    'bg-gradient-to-br from-[var(--red-light)] to-[var(--red-dark)] text-white'
-                  }`}>
-                    <div className="text-sm font-medium opacity-90">Average Score</div>
-                    <div className="text-4xl md:text-5xl font-bold mt-2">
-                      {avgScore.toFixed(1)}%
-                    </div>
-                  </div>
-
-                  {/* Play Again Button */}
-                  <Button
-                    onClick={handleRestart}
-                    variant="success"
-                    size="large"
-                    className="w-full flex items-center justify-center gap-2"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                    Play Again
-                  </Button>
+          {/* Game Grid */}
+          <div className="game-grid">
+            {/* Left: Results */}
+            <div className="game-left-column" style={{ gap: "1rem" }}>
+              {/* Score Summary */}
+              <div className="result-card w-full animate-pop-in">
+                <div className="flex items-center gap-2 pb-3 mb-3 border-b-2 border-gray-200">
+                  <span className="text-xl md:text-2xl">🏆</span>
+                  <h2 className="text-lg md:text-xl font-bold text-[#5E5E5E]">Results</h2>
                 </div>
-              </GamePanel>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="p-3 rounded-xl bg-[#f0fdf4] border-2 border-[#5E5E5E] text-center">
+                    <div className="text-xs text-gray-500">Perfect</div>
+                    <div className="text-2xl md:text-3xl font-bold text-[#16a34a]">
+                      {perfectCount}/{TOTAL_WORDS_PER_GAME}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#f0f9ff] border-2 border-[#5E5E5E] text-center">
+                    <div className="text-xs text-gray-500">Average</div>
+                    <div className={`text-2xl md:text-3xl font-bold ${getScoreColorClass(averageScore)}`}>
+                      {averageScore.toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Round Breakdown */}
+                <div className="space-y-2">
+                  {roundResults.map((round, index) => (
+                    <div
+                      key={`result-${index}`}
+                      className="p-3 bg-gray-50 rounded-xl border-2 border-gray-200 animate-slide-up"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm text-[#5E5E5E]">
+                          Round {index + 1}
+                        </span>
+                        <span className={`font-bold text-sm ${getScoreColorClass(round.accuracy)}`}>
+                          {round.accuracy}%
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        <span className="font-semibold text-[#5E5E5E]">{round.word}</span>
+                        {" — "}
+                        {round.userAnswer ? (
+                          round.accuracy === 100 ? (
+                            <span className="text-[#16a34a]">✓ {round.userAnswer}</span>
+                          ) : (
+                            <span className="text-[#FF4A4A]">{round.userAnswer}</span>
+                          )
+                        ) : (
+                          <span className="text-gray-400">(blank)</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 w-full animate-slide-up delay-500">
+                <button
+                  onClick={handleRestart}
+                  className="btn-glossy btn-green flex-1 text-sm md:text-base"
+                >
+                  Play Again
+                </button>
+              </div>
             </div>
 
-            {/* Character & Feedback - Desktop (Right) */}
-            <div className="hidden md:flex flex-col items-center gap-6">
-              {finalComment && <SpeechBubble message={finalComment} />}
-              <Character mood={getFinalMood()} />
+            {/* Right: Character */}
+            <div className="game-character-container">
+              {finalComment && (
+                <div className="game-speech-bubble-wrapper animate-speech-bubble">
+                  <div className={`game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] ${isThoughtBubble(finalReactionType) ? "thought-bubble" : ""}`}>
+                    <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+                      {finalComment}
+                    </p>
+                    <div className="game-speech-bubble-tail-outer" />
+                    {!isThoughtBubble(finalReactionType) && <div className="game-speech-bubble-tail-inner" />}
+                  </div>
+                </div>
+              )}
+              <Image
+                src={getCharacterImage(finalReactionType)}
+                alt="Character"
+                width={320}
+                height={320}
+                className="game-character-image animate-character"
+              />
             </div>
           </div>
         </div>
@@ -363,117 +484,172 @@ export default function Home() {
   }
 
   // Playing Screen
+  const sentenceWithBlank = currentWord ? createSentenceWithBlank(currentWord.sentence, currentWord.word) : "";
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 md:p-6">
+    <div className="game-container">
       <audio ref={audioRef} />
-      <div className="max-w-7xl w-full">
+      <div className="game-content-wrapper">
         {/* Logo */}
-        <div className="flex justify-center mb-4 md:mb-8">
-          <Logo size="small" />
+        <div className="game-logo" style={{ marginBottom: "2rem" }}>
+          <Image
+            src="/images/logo.png"
+            alt="Fix Your Ears"
+            width={200}
+            height={60}
+            className="w-[140px] md:w-[200px] h-auto"
+          />
         </div>
 
-        {/* Character & Feedback - Mobile (Top) */}
-        <div className="md:hidden mb-4 flex flex-col items-center gap-2">
-          <SpeechBubble message={reaction} className="max-w-xs" />
-          <div className="w-32">
-            <Character mood={getCurrentMood()} />
-          </div>
-        </div>
+        {/* Game Grid */}
+        <div className="game-grid">
+          {/* Left: Game Controls */}
+          <div className="game-left-column">
+            {/* Round Info */}
+            <div className="text-center animate-fade-in">
+              <div className="text-lg md:text-xl font-bold text-[#5E5E5E]">
+                <span className="text-gray-400">Round </span>
+                {currentWordIndex + 1} of {TOTAL_WORDS_PER_GAME}
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {/* Game Controls Panel */}
-          <div>
-            <GamePanel>
-              <div className="space-y-4 md:space-y-6">
-                {/* Round Info */}
-                <div className="flex justify-center items-center pb-4 border-b-2 border-gray-200">
-                  <div className="text-center">
-                    <div className="text-xl md:text-2xl font-bold text-[var(--dark-gray)]">
-                      <span className="text-gray-500">Round </span>
-                      {currentSentenceIndex + 1} of {TOTAL_SENTENCES_PER_GAME}
-                    </div>
-                    <div className="text-base md:text-lg font-semibold text-[var(--dark-gray)] mt-1">
-                      {currentSentence.difficulty.charAt(0).toUpperCase() + currentSentence.difficulty.slice(1)}
-                    </div>
+            {/* Sentence Display */}
+            <div className="sentence-display w-full animate-slide-up">
+              <p className="text-center">
+                {sentenceWithBlank.split("_____").map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && (
+                      <span className="sentence-blank">?????</span>
+                    )}
+                  </span>
+                ))}
+              </p>
+            </div>
+
+            {/* Audio Controls */}
+            <div className="w-full space-y-3 animate-slide-up delay-100">
+              {/* Play Button */}
+              <button
+                onClick={playAudio}
+                disabled={playsRemaining === 0 || isPlaying || showResult}
+                className="btn-glossy btn-blue w-full text-sm md:text-base"
+              >
+                {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
+              </button>
+
+            </div>
+
+            {/* Input & Submit */}
+            {!showResult ? (
+              <div className="w-full space-y-3 animate-slide-up delay-200">
+                <label className="block text-sm font-semibold text-[#5E5E5E] text-center">
+                  Spell the missing word:
+                </label>
+                <input
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && userInput.trim() && !isProcessing) {
+                      handleSubmit();
+                    }
+                  }}
+                  placeholder="Type the word..."
+                  disabled={isProcessing}
+                  className="spelling-input w-full"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                />
+                <button
+                  onClick={handleSubmit}
+                  disabled={!userInput.trim() || isProcessing}
+                  className="btn-glossy btn-green w-full text-sm md:text-base"
+                >
+                  {isProcessing ? "Checking..." : "Submit"}
+                </button>
+              </div>
+            ) : (
+              <div className="w-full space-y-3">
+                {/* Score */}
+                <div className={`text-center p-4 rounded-2xl border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
+                  currentAccuracy === 100
+                    ? "bg-gradient-to-br from-[#99E66B] to-[#79D64B]"
+                    : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.EXCELLENT
+                      ? "bg-gradient-to-br from-[#6DD7FF] to-[#4DC7FF]"
+                      : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.GOOD
+                        ? "bg-gradient-to-br from-[#FFB56A] to-[#FFA54A]"
+                        : "bg-gradient-to-br from-[#FF6B6B] to-[#FF4A4A]"
+                }`}>
+                  <div className="text-sm font-semibold text-white/90">Accuracy</div>
+                  <div className="text-3xl md:text-4xl font-bold text-white">
+                    {currentAccuracy !== null ? `${currentAccuracy}%` : "--"}
                   </div>
                 </div>
 
-                {/* Play Audio Button */}
-                <Button
-                  onClick={playAudio}
-                  variant="primary"
-                  size="large"
-                  disabled={playsRemaining === 0 || isPlaying || showResult}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <Volume2 className="w-5 h-5 md:w-6 md:h-6" />
-                  {isPlaying ? "Playing..." : `Play Audio (${playsRemaining} left)`}
-                </Button>
+                {/* Diff Display */}
+                {currentWord && (
+                  <div className="result-card w-full animate-slide-up delay-100">
+                    <div className="text-xs text-gray-500 mb-1">Correct spelling:</div>
+                    <div className="text-lg md:text-xl font-bold text-[#5E5E5E] mb-2 animate-word-reveal">
+                      {currentWord.word}
+                    </div>
 
-                {/* Input Field */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-[var(--dark-gray)]">Type what you hear:</label>
-                  <Input
-                    value={userInput}
-                    onChange={setUserInput}
-                    placeholder="Type your answer here..."
-                    disabled={showResult}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !showResult && userInput.trim()) {
-                        handleSubmit();
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* Submit/Next Button */}
-                {!showResult ? (
-                  <Button
-                    onClick={handleSubmit}
-                    variant="success"
-                    size="large"
-                    disabled={!userInput.trim()}
-                    className="w-full"
-                  >
-                    Submit
-                  </Button>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Score Display */}
-                    <div className={`p-4 rounded-2xl border-[3px] border-[var(--dark-gray)] text-center ${
-                      isCorrect ? 'bg-gradient-to-br from-[var(--green-light)] to-[var(--green-dark)]' :
-                      'bg-gradient-to-br from-[var(--red-light)] to-[var(--red-dark)]'
-                    } text-white`}>
-                      <div className="text-2xl md:text-4xl font-bold">
-                        {isCorrect ? "Perfect!" : "Not quite..."}
+                    {currentAccuracy !== null && currentAccuracy < 100 && (
+                      <div className="mb-2">
+                        <div className="text-xs text-gray-500 mb-1">Your spelling:</div>
+                        <div className="text-base md:text-lg font-mono font-bold tracking-wider">
+                          {(() => {
+                            const { userDiff } = generateDiff(userInput.trim(), currentWord.word);
+                            return userDiff.map((d, i) => (
+                              <span key={i} className={`diff-${d.status}`}>
+                                {d.char}
+                              </span>
+                            ));
+                          })()}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Correct Answer */}
-                    <div className="p-4 bg-gray-100 rounded-2xl border-[3px] border-[var(--dark-gray)]">
-                      <div className="text-sm font-medium text-gray-600 mb-1">Correct Answer:</div>
-                      <div className="font-semibold text-sm md:text-base text-[var(--dark-gray)]">{currentSentence?.text}</div>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="text-xs text-gray-500 mb-1">Meaning:</div>
+                      <div className="text-sm text-[#5E5E5E] font-medium">{currentWord.meaning}</div>
+                      <div className="text-sm text-gray-400 mt-1">{currentWord.ja}</div>
                     </div>
-
-                    {/* Next Button */}
-                    <Button
-                      onClick={handleNext}
-                      variant="primary"
-                      size="large"
-                      className="w-full"
-                    >
-                      {currentSentenceIndex < TOTAL_SENTENCES_PER_GAME - 1 ? 'Next Round' : 'See Results'}
-                    </Button>
                   </div>
                 )}
+
+                {/* Next Button */}
+                <button
+                  onClick={handleNext}
+                  className="btn-glossy btn-blue w-full text-sm md:text-base animate-slide-up delay-300"
+                >
+                  {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next Round" : "See Results"}
+                </button>
               </div>
-            </GamePanel>
+            )}
           </div>
 
-          {/* Character & Feedback - Desktop (Right) */}
-          <div className="hidden md:flex flex-col items-center gap-6">
-            <SpeechBubble message={reaction} />
-            <Character mood={getCurrentMood()} />
+          {/* Right: Character */}
+          <div className="game-character-container">
+            <div className="game-speech-bubble-wrapper animate-speech-bubble" key={reaction}>
+              <div className={`game-speech-bubble bg-white border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] ${isThoughtBubble(reactionType) ? "thought-bubble" : ""}`}>
+                <p className="text-xs md:text-sm font-semibold text-[#5E5E5E] text-center">
+                  {reaction}
+                </p>
+                <div className="game-speech-bubble-tail-outer" />
+                {!isThoughtBubble(reactionType) && <div className="game-speech-bubble-tail-inner" />}
+              </div>
+            </div>
+            <Image
+              src={getCharacterImage(reactionType)}
+              alt="Character"
+              width={320}
+              height={320}
+              className="game-character-image animate-character"
+              key={reactionType || "base"}
+            />
           </div>
         </div>
       </div>
