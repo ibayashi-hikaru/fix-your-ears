@@ -498,177 +498,154 @@ export default function Home() {
   return (
     <div className="game-container">
       <audio ref={audioRef} />
-      <div className="game-content-wrapper">
+      <div className="flex flex-col items-center min-h-screen px-4 py-3">
         {/* Logo */}
-        <div className="game-logo">
-          <Image
-            src="/images/logo.png"
-            alt="Fix Your Ears"
-            width={800}
-            height={240}
-            className="h-20 md:h-32 object-contain"
-          />
+        <Image
+          src="/images/logo.png"
+          alt="Fix Your Ears"
+          width={800}
+          height={240}
+          className="h-12 object-contain mb-2"
+        />
+
+        {/* Round Info */}
+        <div className="text-sm font-bold text-[#5E5E5E] mb-2 animate-fade-in">
+          <span className="text-gray-400">Round </span>
+          {currentWordIndex + 1} of {TOTAL_WORDS_PER_GAME}
         </div>
 
-        {/* Game Grid */}
-        <div className="game-grid">
-          {/* Left: Game Controls */}
-          <div className="game-left-column">
-            {/* Round Info */}
-            <div className="text-center animate-fade-in">
-              <div className="text-lg md:text-xl font-bold text-[#5E5E5E]">
-                <span className="text-gray-400">Round </span>
-                {currentWordIndex + 1} of {TOTAL_WORDS_PER_GAME}
+        {/* Character + Speech Bubble row */}
+        <div key={`bubble-${reaction}`} className="flex items-center gap-2 w-full max-w-md mb-3 animate-pop-in">
+          <Image
+            src={getCharacterImage(reactionType)}
+            alt="Character"
+            width={128}
+            height={128}
+            className="w-14 h-14 object-contain flex-shrink-0"
+            key={reactionType || "base"}
+          />
+          <div
+            className="flex-1 rounded-2xl px-3 py-2"
+            style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
+          >
+            <p className="text-xs font-semibold text-[#5E5E5E]">
+              {reaction}
+            </p>
+          </div>
+        </div>
+
+        {/* Sentence Display - full width */}
+        <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
+          <p className="text-center">
+            {sentenceWithBlank.split("_____").map((part, i, arr) => (
+              <span key={i}>
+                {part}
+                {i < arr.length - 1 && (
+                  <span className="sentence-blank">?????</span>
+                )}
+              </span>
+            ))}
+          </p>
+        </div>
+
+        {/* Play Audio Button - compact */}
+        <button
+          onClick={playAudio}
+          disabled={playsRemaining === 0 || isPlaying || showResult}
+          className="btn-glossy btn-blue w-full max-w-md text-sm py-2.5 mb-3 animate-slide-up delay-100"
+        >
+          {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
+        </button>
+
+        {/* Input & Submit / Result */}
+        {!showResult ? (
+          <div className="w-full max-w-md space-y-2 animate-slide-up delay-200">
+            <label className="block text-xs font-semibold text-[#5E5E5E] text-center">
+              Spell the missing word:
+            </label>
+            <input
+              type="text"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && userInput.trim() && !isProcessing) {
+                  handleSubmit();
+                }
+              }}
+              placeholder="Type the word..."
+              disabled={isProcessing}
+              className="spelling-input w-full"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!userInput.trim() || isProcessing}
+              className="btn-glossy btn-green w-full text-sm py-2.5"
+            >
+              {isProcessing ? "Checking..." : "Submit"}
+            </button>
+          </div>
+        ) : (
+          <div className="w-full max-w-md space-y-3">
+            {/* Score */}
+            <div className={`text-center p-3 rounded-2xl border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
+              currentAccuracy === 100
+                ? "bg-gradient-to-br from-[#99E66B] to-[#79D64B]"
+                : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.EXCELLENT
+                  ? "bg-gradient-to-br from-[#6DD7FF] to-[#4DC7FF]"
+                  : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.GOOD
+                    ? "bg-gradient-to-br from-[#FFB56A] to-[#FFA54A]"
+                    : "bg-gradient-to-br from-[#FF6B6B] to-[#FF4A4A]"
+            }`}>
+              <div className="text-xs font-semibold text-white/90">Accuracy</div>
+              <div className="text-2xl font-bold text-white">
+                {currentAccuracy !== null ? `${currentAccuracy}%` : "--"}
               </div>
             </div>
 
-            {/* Sentence Display */}
-            <div className="sentence-display w-full animate-slide-up">
-              <p className="text-center">
-                {sentenceWithBlank.split("_____").map((part, i, arr) => (
-                  <span key={i}>
-                    {part}
-                    {i < arr.length - 1 && (
-                      <span className="sentence-blank">?????</span>
-                    )}
-                  </span>
-                ))}
-              </p>
-            </div>
-
-            {/* Audio Controls */}
-            <div className="w-full space-y-3 animate-slide-up delay-100">
-              {/* Play Button */}
-              <button
-                onClick={playAudio}
-                disabled={playsRemaining === 0 || isPlaying || showResult}
-                className="btn-glossy btn-blue w-full text-sm md:text-base"
-              >
-                {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
-              </button>
-
-            </div>
-
-            {/* Input & Submit */}
-            {!showResult ? (
-              <div className="w-full space-y-3 animate-slide-up delay-200">
-                <label className="block text-sm font-semibold text-[#5E5E5E] text-center">
-                  Spell the missing word:
-                </label>
-                <input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && userInput.trim() && !isProcessing) {
-                      handleSubmit();
-                    }
-                  }}
-                  placeholder="Type the word..."
-                  disabled={isProcessing}
-                  className="spelling-input w-full"
-                  autoComplete="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                />
-                <button
-                  onClick={handleSubmit}
-                  disabled={!userInput.trim() || isProcessing}
-                  className="btn-glossy btn-green w-full text-sm md:text-base"
-                >
-                  {isProcessing ? "Checking..." : "Submit"}
-                </button>
-              </div>
-            ) : (
-              <div className="w-full space-y-3">
-                {/* Score */}
-                <div className={`text-center p-4 rounded-2xl border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
-                  currentAccuracy === 100
-                    ? "bg-gradient-to-br from-[#99E66B] to-[#79D64B]"
-                    : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.EXCELLENT
-                      ? "bg-gradient-to-br from-[#6DD7FF] to-[#4DC7FF]"
-                      : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.GOOD
-                        ? "bg-gradient-to-br from-[#FFB56A] to-[#FFA54A]"
-                        : "bg-gradient-to-br from-[#FF6B6B] to-[#FF4A4A]"
-                }`}>
-                  <div className="text-sm font-semibold text-white/90">Accuracy</div>
-                  <div className="text-3xl md:text-4xl font-bold text-white">
-                    {currentAccuracy !== null ? `${currentAccuracy}%` : "--"}
-                  </div>
+            {/* Diff Display */}
+            {currentWord && (
+              <div className="result-card w-full animate-slide-up delay-100">
+                <div className="text-xs text-gray-500 mb-1">Correct spelling:</div>
+                <div className="text-lg font-bold text-[#5E5E5E] mb-2 animate-word-reveal">
+                  {currentWord.word}
                 </div>
 
-                {/* Diff Display */}
-                {currentWord && (
-                  <div className="result-card w-full animate-slide-up delay-100">
-                    <div className="text-xs text-gray-500 mb-1">Correct spelling:</div>
-                    <div className="text-lg md:text-xl font-bold text-[#5E5E5E] mb-2 animate-word-reveal">
-                      {currentWord.word}
-                    </div>
-
-                    {currentAccuracy !== null && currentAccuracy < 100 && (
-                      <div className="mb-2">
-                        <div className="text-xs text-gray-500 mb-1">Your spelling:</div>
-                        <div className="text-base md:text-lg font-mono font-bold tracking-wider">
-                          {(() => {
-                            const { userDiff } = generateDiff(userInput.trim(), currentWord.word);
-                            return userDiff.map((d, i) => (
-                              <span key={i} className={`diff-${d.status}`}>
-                                {d.char}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="text-xs text-gray-500 mb-1">Meaning:</div>
-                      <div className="text-sm text-[#5E5E5E] font-medium">{currentWord.meaning}</div>
-                      <div className="text-sm text-gray-400 mt-1">{currentWord.ja}</div>
+                {currentAccuracy !== null && currentAccuracy < 100 && (
+                  <div className="mb-2">
+                    <div className="text-xs text-gray-500 mb-1">Your spelling:</div>
+                    <div className="text-base font-mono font-bold tracking-wider">
+                      {(() => {
+                        const { userDiff } = generateDiff(userInput.trim(), currentWord.word);
+                        return userDiff.map((d, i) => (
+                          <span key={i} className={`diff-${d.status}`}>
+                            {d.char}
+                          </span>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
 
-                {/* Next Button */}
-                <button
-                  onClick={handleNext}
-                  className="btn-glossy btn-blue w-full text-sm md:text-base animate-slide-up delay-300"
-                >
-                  {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next Round" : "See Results"}
-                </button>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="text-xs text-gray-500 mb-1">Meaning:</div>
+                  <div className="text-sm text-[#5E5E5E] font-medium">{currentWord.meaning}</div>
+                  <div className="text-sm text-gray-400 mt-1">{currentWord.ja}</div>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Right: Character */}
-          <div className="game-character-container">
-            <div key={`bubble-${reaction}`} className="game-speech-bubble-wrapper animate-speech-bubble">
-              <div
-                className={`game-speech-bubble ${isThoughtBubble(reactionType) ? "thought-bubble" : ""}`}
-                style={{ background: '#FFFFFF', boxShadow: '0px 4px 0px #5E5E5E', border: '3px solid #5E5E5E' }}
-              >
-                <p className="text-sm md:text-2xl font-bold text-center" style={{ color: '#5E5E5E' }}>
-                  {reaction}
-                </p>
-                {isThoughtBubble(reactionType) ? (
-                  <div className="game-speech-bubble-tail-outer" />
-                ) : (
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -translate-y-1">
-                    <div className="w-0 h-0 border-l-8 md:border-l-12 border-r-8 md:border-r-12 border-t-8 md:border-t-12 border-l-transparent border-r-transparent" style={{ borderTopColor: '#FFFFFF' }}></div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <Image
-              src={getCharacterImage(reactionType)}
-              alt="Character"
-              width={320}
-              height={320}
-              className="game-character-image animate-character"
-              key={reactionType || "base"}
-            />
+            {/* Next Button */}
+            <button
+              onClick={handleNext}
+              className="btn-glossy btn-blue w-full text-sm py-2.5 animate-slide-up delay-300"
+            >
+              {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next Round" : "See Results"}
+            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
