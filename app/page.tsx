@@ -61,20 +61,10 @@ export default function Home() {
   const [finalReactionType, setFinalReactionType] = useState<ReactionType | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
-  const audioBlobRef = useRef<Blob | null>(null);
-  const preloadingRef = useRef(false);
 
   const todaysWords = getTodaysWords();
   const currentWord = todaysWords[currentWordIndex];
   const averageScore = allScores.length > 0 ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0;
-
-  const revokeAudioUrl = () => {
-    if (audioUrlRef.current) {
-      URL.revokeObjectURL(audioUrlRef.current);
-      audioUrlRef.current = null;
-    }
-  };
 
   const stopAudioPlayback = () => {
     if (audioRef.current) {
@@ -84,7 +74,6 @@ export default function Home() {
       audioRef.current.onerror = null;
     }
     setIsPlaying(false);
-    revokeAudioUrl();
   };
 
   // Cleanup on unmount
@@ -95,67 +84,23 @@ export default function Home() {
         audioRef.current.onended = null;
         audioRef.current.onerror = null;
       }
-      revokeAudioUrl();
     };
   }, []);
-
-  // Preload audio when round changes
-  const preloadAudio = async (sentence: string) => {
-    if (preloadingRef.current) return;
-    preloadingRef.current = true;
-    try {
-      const response = await fetch("/api/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sentence }),
-      });
-      if (response.ok) {
-        audioBlobRef.current = await response.blob();
-      }
-    } catch (error) {
-      console.error("Preload failed:", error);
-    } finally {
-      preloadingRef.current = false;
-    }
-  };
-
-  useEffect(() => {
-    if (gameState === "playing" && currentWord) {
-      audioBlobRef.current = null;
-      preloadAudio(currentWord.sentence);
-    }
-  }, [gameState, currentWordIndex]);
 
   const handleStart = () => {
     setGameState("playing");
     setReaction("Listen carefully, then spell the missing word.");
   };
 
-  const playAudio = async () => {
+  const playAudio = () => {
     if (!currentWord || playsRemaining <= 0 || isPlaying) return;
 
     setIsPlaying(true);
 
     try {
-      // Use preloaded blob if available, otherwise fetch
-      let audioBlob = audioBlobRef.current;
-      if (!audioBlob) {
-        const response = await fetch("/api/synthesize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: currentWord.sentence }),
-        });
-        if (!response.ok) throw new Error("Failed to synthesize speech");
-        audioBlob = await response.blob();
-      }
-
-      const audioUrl = URL.createObjectURL(audioBlob);
-
       if (audioRef.current) {
-        revokeAudioUrl();
-        audioUrlRef.current = audioUrl;
-        audioRef.current.src = audioUrl;
-        await audioRef.current.play();
+        audioRef.current.src = `/audio/${currentWord.word}.mp3`;
+        audioRef.current.play();
         setPlaysRemaining((prev) => Math.max(prev - 1, 0));
 
         audioRef.current.onended = () => {
@@ -164,15 +109,12 @@ export default function Home() {
 
         audioRef.current.onerror = () => {
           setIsPlaying(false);
+          setReaction("Hmm, something went wrong with the audio. Try again.");
         };
-      } else {
-        URL.revokeObjectURL(audioUrl);
-        setIsPlaying(false);
       }
     } catch (error) {
       console.error("Error playing audio:", error);
       setIsPlaying(false);
-      setReaction("Hmm, something went wrong with the audio. Try again.");
     }
   };
 
@@ -346,7 +288,7 @@ export default function Home() {
 
             {/* Right: Character */}
             <div className="game-character-container">
-              <div className="game-speech-bubble-wrapper animate-speech-bubble">
+              <div className="game-speech-bubble-wrapper animate-speech-bubble" style={{ width: '50vw', maxWidth: '260px', left: '50%', transform: 'translateX(-50%) translateY(-100%)' }}>
                 <div className="game-speech-bubble" style={{ background: '#FFFFFF', boxShadow: '0px 4px 0px #5E5E5E', border: '3px solid #5E5E5E' }}>
                   <p className="text-sm md:text-2xl font-bold text-center" style={{ color: '#5E5E5E' }}>
                     {reaction}
@@ -505,7 +447,7 @@ export default function Home() {
           alt="Fix Your Ears"
           width={800}
           height={240}
-          className="h-12 object-contain mb-2"
+          className="h-32 object-contain mb-2"
         />
 
         {/* Round Info */}
@@ -519,7 +461,7 @@ export default function Home() {
           {/* Speech/Thought Bubble */}
           <div className="flex-1 min-w-0 relative">
             <div
-              className={`px-3 py-2 ${isThoughtBubble(reactionType) ? "rounded-[50px]" : "rounded-2xl"}`}
+              className={`px-3 py-2 ${isThoughtBubble(reactionType) ? "rounded-[50px]" : "rounded-lg"}`}
               style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
             >
               <p className="text-xs font-semibold text-[#5E5E5E]">
@@ -533,7 +475,7 @@ export default function Home() {
                 <div className="w-1.5 h-1.5 rounded-full bg-white border-[1.5px] border-[#5E5E5E]" />
               </div>
             ) : (
-              <div className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-l-[10px] border-t-transparent border-b-transparent border-l-white" style={{ filter: 'drop-shadow(2px 0 0 #5E5E5E)' }} />
+              <div className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-l-[10px] border-t-transparent border-b-transparent border-l-white" style={{ filter: 'drop-shadow(3px 0 0 #5E5E5E)' }} />
             )}
           </div>
           {/* Character */}
@@ -547,9 +489,10 @@ export default function Home() {
           />
         </div>
 
-        {/* Sentence Display + Play Audio */}
+        {/* Sentence Display */}
         <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
-          <p className="text-center">
+          <p className="text-left">
+            <span className="text-gray-400 mr-1">🔊</span>
             {sentenceWithBlank.split("_____").map((part, i, arr) => (
               <span key={i}>
                 {part}
@@ -563,9 +506,9 @@ export default function Home() {
             <button
               onClick={playAudio}
               disabled={playsRemaining === 0 || isPlaying || showResult}
-              className="text-sm font-semibold text-[#4DC7FF] disabled:text-gray-300 disabled:cursor-not-allowed"
+              className="btn-glossy btn-gray !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
             >
-              {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
+              {isPlaying ? "Playing..." : `Play (${playsRemaining} left)`}
             </button>
           </div>
         </div>
@@ -600,7 +543,7 @@ export default function Home() {
         ) : (
           <div className="w-full max-w-md space-y-3">
             {/* Score */}
-            <div className={`text-center p-3 rounded-2xl border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
+            <div className={`text-center p-3 rounded-lg border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
               currentAccuracy === 100
                 ? "bg-gradient-to-br from-[#99E66B] to-[#79D64B]"
                 : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.EXCELLENT

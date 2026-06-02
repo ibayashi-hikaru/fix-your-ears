@@ -27,7 +27,7 @@ body {
 
 /* Standard button base styles */
 .btn-glossy {
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 14px 28px;
   font-weight: 600;
   font-size: 16px;
@@ -367,7 +367,7 @@ body {
   font-weight: 600;
   padding: 0.75rem 1rem;
   border: 3px solid #5E5E5E;
-  border-radius: 12px;
+  border-radius: 8px;
   background: white;
   color: #5E5E5E;
   box-shadow: 0px 4px 0px #5E5E5E;
@@ -395,7 +395,7 @@ body {
   color: #5E5E5E;
   background: white;
   border: 3px solid #5E5E5E;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 1rem 1.25rem;
   box-shadow: 0px 4px 0px #5E5E5E;
 }
@@ -471,7 +471,7 @@ body {
 .result-card {
   background: white;
   border: 3px solid #5E5E5E;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 1rem;
   box-shadow: 0px 4px 0px #5E5E5E;
 }
