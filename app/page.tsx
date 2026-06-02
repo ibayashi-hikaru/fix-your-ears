@@ -515,26 +515,39 @@ export default function Home() {
         </div>
 
         {/* Character + Speech Bubble row */}
-        <div key={`bubble-${reaction}`} className="flex items-center gap-2 w-full max-w-md mb-3 animate-pop-in">
+        <div key={`bubble-${reaction}`} className="flex items-center gap-1 w-full max-w-md mb-3 animate-pop-in">
+          {/* Speech/Thought Bubble */}
+          <div className="flex-1 min-w-0 relative">
+            <div
+              className={`px-3 py-2 ${isThoughtBubble(reactionType) ? "rounded-[50px]" : "rounded-2xl"}`}
+              style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
+            >
+              <p className="text-xs font-semibold text-[#5E5E5E]">
+                {reaction}
+              </p>
+            </div>
+            {/* Tail or thought dots - absolutely positioned on right edge */}
+            {isThoughtBubble(reactionType) ? (
+              <div className="absolute right-[-16px] top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-[#5E5E5E]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-white border-[1.5px] border-[#5E5E5E]" />
+              </div>
+            ) : (
+              <div className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-l-[10px] border-t-transparent border-b-transparent border-l-white" style={{ filter: 'drop-shadow(2px 0 0 #5E5E5E)' }} />
+            )}
+          </div>
+          {/* Character */}
           <Image
             src={getCharacterImage(reactionType)}
             alt="Character"
-            width={128}
-            height={128}
-            className="w-14 h-14 object-contain flex-shrink-0"
+            width={160}
+            height={160}
+            className="w-36 h-36 object-contain flex-shrink-0"
             key={reactionType || "base"}
           />
-          <div
-            className="flex-1 rounded-2xl px-3 py-2"
-            style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
-          >
-            <p className="text-xs font-semibold text-[#5E5E5E]">
-              {reaction}
-            </p>
-          </div>
         </div>
 
-        {/* Sentence Display - full width */}
+        {/* Sentence Display + Play Audio */}
         <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
           <p className="text-center">
             {sentenceWithBlank.split("_____").map((part, i, arr) => (
@@ -546,23 +559,20 @@ export default function Home() {
               </span>
             ))}
           </p>
+          <div className="flex justify-center mt-3 pt-3 border-t border-gray-200">
+            <button
+              onClick={playAudio}
+              disabled={playsRemaining === 0 || isPlaying || showResult}
+              className="text-sm font-semibold text-[#4DC7FF] disabled:text-gray-300 disabled:cursor-not-allowed"
+            >
+              {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
+            </button>
+          </div>
         </div>
-
-        {/* Play Audio Button - compact */}
-        <button
-          onClick={playAudio}
-          disabled={playsRemaining === 0 || isPlaying || showResult}
-          className="btn-glossy btn-blue w-full max-w-md text-sm py-2.5 mb-3 animate-slide-up delay-100"
-        >
-          {isPlaying ? "🔊 Playing..." : `🔊 Play Audio (${playsRemaining} left)`}
-        </button>
 
         {/* Input & Submit / Result */}
         {!showResult ? (
           <div className="w-full max-w-md space-y-2 animate-slide-up delay-200">
-            <label className="block text-xs font-semibold text-[#5E5E5E] text-center">
-              Spell the missing word:
-            </label>
             <input
               type="text"
               value={userInput}
