@@ -460,6 +460,29 @@ export default function Home() {
 
         {/* Sentence Display with inline input */}
         <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+            <button
+              onClick={playAudio}
+              disabled={playsRemaining === 0 || isPlaying || showResult}
+              className="btn-glossy btn-blue !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
+            >
+              {isPlaying ? "▶ Playing..." : `▶ Play (${playsRemaining} left)`}
+            </button>
+            {!showResult && (
+              <button
+                onClick={handleSubmit}
+                disabled={!userInput.trim() || isProcessing}
+                className="btn-glossy btn-green !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
+              >
+                {isProcessing ? "Checking..." : "Submit"}
+              </button>
+            )}
+            {showResult && currentAccuracy !== null && (
+              <span className={`text-xl font-bold ${getScoreColorClass(convertToScore10(currentAccuracy))}`}>
+                Score: {convertToScore10(currentAccuracy)}
+              </span>
+            )}
+          </div>
           <p className="text-center">
             <span className="text-gray-400 mr-1">🔊</span>
             {sentenceWithBlank.split("_____").map((part, i, arr) => (
@@ -493,29 +516,6 @@ export default function Home() {
               </span>
             ))}
           </p>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-            <button
-              onClick={playAudio}
-              disabled={playsRemaining === 0 || isPlaying || showResult}
-              className="btn-glossy btn-blue !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
-            >
-              {isPlaying ? "▶ Playing..." : `▶ Play (${playsRemaining} left)`}
-            </button>
-            {!showResult && (
-              <button
-                onClick={handleSubmit}
-                disabled={!userInput.trim() || isProcessing}
-                className="btn-glossy btn-green !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
-              >
-                {isProcessing ? "Checking..." : "Submit"}
-              </button>
-            )}
-            {showResult && currentAccuracy !== null && (
-              <span className={`text-xl font-bold ${getScoreColorClass(convertToScore10(currentAccuracy))}`}>
-                Score: {convertToScore10(currentAccuracy)}
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Result */}
