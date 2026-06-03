@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     description: "A Spicy Spelling Challenge - Can you spell what you hear?",
     images: [
       {
-        url: "/images/thumbnail.jpeg",
+        url: "/images/thumbnail.jpeg?v=2",
         width: 1200,
         height: 630,
         alt: "Fix Your Ears",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Fix Your Ears",
     description: "A Spicy Spelling Challenge - Can you spell what you hear?",
-    images: ["/images/thumbnail.jpeg"],
+    images: ["/images/thumbnail.jpeg?v=2"],
   },
 };
 
