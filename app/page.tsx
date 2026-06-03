@@ -396,7 +396,7 @@ export default function Home() {
   return (
     <div className="game-container">
       <audio ref={audioRef} />
-      <div className="flex flex-col items-center min-h-screen px-4 py-3">
+      <div className="flex flex-col items-center fixed inset-0 overflow-hidden px-4 py-3 bg-[#FFF9E6]">
         {/* Logo */}
         <Image
           src="/images/logo.png"
@@ -445,7 +445,7 @@ export default function Home() {
           />
         </div>
 
-        {/* Sentence Display */}
+        {/* Sentence Display with inline input */}
         <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
           <p className="text-left">
             <span className="text-gray-400 mr-1">🔊</span>
@@ -453,12 +453,35 @@ export default function Home() {
               <span key={i}>
                 {part}
                 {i < arr.length - 1 && (
-                  <span className="sentence-blank">?????</span>
+                  showResult ? (
+                    <span className="sentence-blank" style={{ minWidth: '60px' }}>
+                      {currentWord?.word}
+                    </span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && userInput.trim() && !isProcessing) {
+                          handleSubmit();
+                        }
+                      }}
+                      placeholder="???"
+                      disabled={isProcessing}
+                      className="inline-block border-b-2 border-dashed border-[#4DC7FF] bg-transparent outline-none text-center font-bold text-[#5E5E5E] mx-1"
+                      style={{ width: `${Math.max(60, userInput.length * 12 + 30)}px` }}
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      autoFocus
+                    />
+                  )
                 )}
               </span>
             ))}
           </p>
-          <div className="flex justify-center mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-gray-200">
             <button
               onClick={playAudio}
               disabled={playsRemaining === 0 || isPlaying || showResult}
@@ -466,37 +489,20 @@ export default function Home() {
             >
               {isPlaying ? "Playing..." : `Play (${playsRemaining} left)`}
             </button>
+            {!showResult && (
+              <button
+                onClick={handleSubmit}
+                disabled={!userInput.trim() || isProcessing}
+                className="btn-glossy btn-green !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
+              >
+                {isProcessing ? "Checking..." : "Submit"}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Input & Submit / Result */}
-        {!showResult ? (
-          <div className="w-full max-w-md space-y-2 animate-slide-up delay-200">
-            <input
-              type="text"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && userInput.trim() && !isProcessing) {
-                  handleSubmit();
-                }
-              }}
-              placeholder="Type the word..."
-              disabled={isProcessing}
-              className="spelling-input w-full"
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck={false}
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!userInput.trim() || isProcessing}
-              className="btn-glossy btn-green w-full text-sm py-2.5"
-            >
-              {isProcessing ? "Checking..." : "Submit"}
-            </button>
-          </div>
-        ) : (
+        {/* Result */}
+        {showResult && (
           <div className="w-full max-w-md space-y-3">
             {/* Result Card */}
             {currentWord && (
