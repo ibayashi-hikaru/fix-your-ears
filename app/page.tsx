@@ -39,7 +39,7 @@ type RoundResult = {
   ja: string;
 };
 
-const OPENING_LINE = "I heard your listening skills are impressive. Let's see about that.";
+const OPENING_LINE = "I heard you have great listening skill. Let's see about that.";
 
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>("start");
