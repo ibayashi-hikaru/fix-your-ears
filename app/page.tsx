@@ -282,7 +282,7 @@ export default function Home() {
                   onClick={handleStart}
                   className="btn-glossy btn-green text-lg md:text-xl px-8 md:px-12 py-4 md:py-5 animate-pop-in"
                 >
-                  Start Game
+                  Start
                 </button>
               </div>
             </div>
@@ -364,28 +364,49 @@ export default function Home() {
             />
           </div>
 
-          {/* Word List - compact */}
+          {/* Round Results */}
           <div className="w-full max-w-md mb-4 animate-slide-up delay-200">
             {roundResults.map((round, index) => (
               <div
                 key={`result-${index}`}
                 className="flex items-center justify-between py-1.5 border-b border-gray-200 last:border-b-0"
               >
-                <span className="text-sm font-bold text-[#5E5E5E]">{round.word}</span>
+                <span className="text-sm font-semibold text-[#5E5E5E]">Round {index + 1}</span>
                 <span className={`text-sm font-bold ${getScoreColorClass(convertToScore10(round.accuracy))}`}>
-                  {convertToScore10(round.accuracy)}
+                  {convertToScore10(round.accuracy)} pt
                 </span>
               </div>
             ))}
           </div>
 
-          {/* Play Again */}
-          <button
-            onClick={handleRestart}
-            className="btn-glossy btn-green text-sm px-8 py-3 animate-slide-up delay-300"
-          >
-            Play Again
-          </button>
+          {/* Buttons */}
+          <div className="flex items-center gap-3 animate-slide-up delay-300">
+            <button
+              onClick={handleRestart}
+              className="btn-glossy btn-green text-sm px-6 py-2.5"
+            >
+              Play Again
+            </button>
+            <button
+              onClick={() => {
+                const today = new Date();
+                const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+                const avgScore = convertToScore10(averageScore);
+                const roundScores = roundResults.map((r, i) => `R${i + 1}: ${convertToScore10(r.accuracy)}`).join(" | ");
+                const shareText = `Fix Your Ears! — ${dateStr}\n\n👂 Average: ${avgScore}/10\n${roundScores}\n\n👩‍🏫 "${finalComment || ''}"\n\n#FixYourEars\nCreated by Hikaru (@hhp_hikaru)\nhttps://www.fix-your-ears.app`;
+                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                window.open(twitterUrl, '_blank', 'width=550,height=420');
+              }}
+              className="btn-glossy text-sm px-6 py-2.5"
+              style={{
+                background: '#000000',
+                color: 'white',
+                boxShadow: '0px 3px 0px #5E5E5E',
+              }}
+            >
+              Share on X
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -448,15 +469,15 @@ export default function Home() {
 
         {/* Sentence Display with inline input */}
         <div className="sentence-display w-full max-w-md mb-3 animate-slide-up">
-          <p className="text-left">
+          <p className="text-center">
             <span className="text-gray-400 mr-1">🔊</span>
             {sentenceWithBlank.split("_____").map((part, i, arr) => (
               <span key={i}>
                 {part}
                 {i < arr.length - 1 && (
                   showResult ? (
-                    <span className="sentence-blank" style={{ minWidth: '60px' }}>
-                      {currentWord?.word}
+                    <span className="inline-block mx-1 font-bold border-b-2" style={{ minWidth: '60px', borderColor: currentAccuracy === 100 ? '#16a34a' : '#FF4A4A', color: currentAccuracy === 100 ? '#16a34a' : '#FF4A4A' }}>
+                      {userInput.trim() || "—"}
                     </span>
                   ) : (
                     <input
@@ -470,7 +491,7 @@ export default function Home() {
                       }}
                       placeholder="???"
                       disabled={isProcessing}
-                      className="inline-block border-b-2 border-dashed border-[#4DC7FF] bg-transparent outline-none text-center font-bold text-[#5E5E5E] mx-1 w-[160px]"
+                      className="inline-block border-2 border-[#5E5E5E] bg-white text-[#5E5E5E] outline-none text-center font-bold mx-1 w-[130px] rounded-none px-1 text-sm"
                       autoComplete="off"
                       autoCapitalize="off"
                       spellCheck={false}
@@ -481,13 +502,13 @@ export default function Home() {
               </span>
             ))}
           </p>
-          <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
             <button
               onClick={playAudio}
               disabled={playsRemaining === 0 || isPlaying || showResult}
-              className="btn-glossy btn-gray !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
+              className="btn-glossy btn-blue !py-1.5 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
             >
-              {isPlaying ? "Playing..." : `Play (${playsRemaining} left)`}
+              {isPlaying ? "▶ Playing..." : `▶ Play (${playsRemaining} left)`}
             </button>
             {!showResult && (
               <button
@@ -498,44 +519,28 @@ export default function Home() {
                 {isProcessing ? "Checking..." : "Submit"}
               </button>
             )}
+            {showResult && currentAccuracy !== null && (
+              <span className={`text-xl font-bold ${getScoreColorClass(convertToScore10(currentAccuracy))}`}>
+                Score: {convertToScore10(currentAccuracy)}
+              </span>
+            )}
           </div>
         </div>
 
         {/* Result */}
         {showResult && (
           <div className="w-full max-w-md space-y-3">
-            {/* Result Card */}
+            {/* Flash Card */}
             {currentWord && (
               <div className="result-card w-full animate-slide-up">
-                {/* Score line */}
-                <div className={`text-sm font-bold mb-2 animate-score-pop ${getScoreColorClass(currentAccuracy !== null ? convertToScore10(currentAccuracy) : 0)}`}>
-                  Score: {currentAccuracy !== null ? convertToScore10(currentAccuracy) : "--"} / 10
-                </div>
-                {/* Correct/Yours */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-gray-400">Correct:</span>
-                  <span className="text-sm font-bold text-[#5E5E5E] animate-word-reveal">{currentWord.word}</span>
-                </div>
-                {currentAccuracy !== null && currentAccuracy < 100 && (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs text-gray-400">Yours:</span>
-                    <span className="text-sm font-mono font-bold tracking-wider">
-                      {(() => {
-                        const { userDiff } = generateDiff(userInput.trim(), currentWord.word);
-                        return userDiff.map((d, i) => (
-                          <span key={i} className={`diff-${d.status}`}>
-                            {d.char}
-                          </span>
-                        ));
-                      })()}
-                    </span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xl font-bold text-[#5E5E5E] animate-word-reveal">{currentWord.word}</span>
+                    <div className="text-sm font-medium text-[#5E5E5E]">{currentWord.ja}</div>
                   </div>
-                )}
-                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                  <div className="text-sm text-gray-400">{currentWord.ja}</div>
                   <button
                     onClick={handleNext}
-                    className="btn-glossy btn-gray !py-1 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full flex-shrink-0 ml-2"
+                    className="btn-glossy btn-green !py-1 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full flex-shrink-0 ml-2"
                   >
                     {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next →" : "Results →"}
                   </button>
