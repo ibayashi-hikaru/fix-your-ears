@@ -542,34 +542,22 @@ export default function Home() {
           </div>
         ) : (
           <div className="w-full max-w-md space-y-3">
-            {/* Score */}
-            <div className={`text-center p-3 rounded-lg border-[3px] border-[#5E5E5E] shadow-[0px_4px_0px_#5E5E5E] animate-score-pop ${
-              currentAccuracy === 100
-                ? "bg-gradient-to-br from-[#99E66B] to-[#79D64B]"
-                : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.EXCELLENT
-                  ? "bg-gradient-to-br from-[#6DD7FF] to-[#4DC7FF]"
-                  : currentAccuracy !== null && currentAccuracy >= SCORE_THRESHOLDS.GOOD
-                    ? "bg-gradient-to-br from-[#FFB56A] to-[#FFA54A]"
-                    : "bg-gradient-to-br from-[#FF6B6B] to-[#FF4A4A]"
-            }`}>
-              <div className="text-xs font-semibold text-white/90">Accuracy</div>
-              <div className="text-2xl font-bold text-white">
-                {currentAccuracy !== null ? `${currentAccuracy}%` : "--"}
-              </div>
-            </div>
-
-            {/* Diff Display */}
+            {/* Result Card */}
             {currentWord && (
-              <div className="result-card w-full animate-slide-up delay-100">
-                <div className="text-xs text-gray-500 mb-1">Correct spelling:</div>
-                <div className="text-lg font-bold text-[#5E5E5E] mb-2 animate-word-reveal">
-                  {currentWord.word}
+              <div className="result-card w-full animate-slide-up">
+                {/* Score line */}
+                <div className={`text-sm font-bold mb-2 animate-score-pop ${getScoreColorClass(currentAccuracy ?? 0)}`}>
+                  Score: {currentAccuracy !== null ? currentAccuracy : "--"} out of 100
                 </div>
-
+                {/* Correct/Yours */}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs text-gray-400">Correct:</span>
+                  <span className="text-sm font-bold text-[#5E5E5E] animate-word-reveal">{currentWord.word}</span>
+                </div>
                 {currentAccuracy !== null && currentAccuracy < 100 && (
-                  <div className="mb-2">
-                    <div className="text-xs text-gray-500 mb-1">Your spelling:</div>
-                    <div className="text-base font-mono font-bold tracking-wider">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs text-gray-400">Yours:</span>
+                    <span className="text-sm font-mono font-bold tracking-wider">
                       {(() => {
                         const { userDiff } = generateDiff(userInput.trim(), currentWord.word);
                         return userDiff.map((d, i) => (
@@ -578,14 +566,11 @@ export default function Home() {
                           </span>
                         ));
                       })()}
-                    </div>
+                    </span>
                   </div>
                 )}
-
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <div className="text-xs text-gray-500 mb-1">Meaning:</div>
-                  <div className="text-sm text-[#5E5E5E] font-medium">{currentWord.meaning}</div>
-                  <div className="text-sm text-gray-400 mt-1">{currentWord.ja}</div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="text-sm text-gray-400">{currentWord.ja}</div>
                 </div>
               </div>
             )}
