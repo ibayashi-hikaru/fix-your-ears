@@ -88,6 +88,16 @@ export default function Home() {
     };
   }, []);
 
+  // Preload all character images
+  useEffect(() => {
+    Object.values(REACTION_IMAGES).forEach((src) => {
+      const img = new window.Image();
+      img.src = src;
+    });
+    const img = new window.Image();
+    img.src = DEFAULT_IMAGE;
+  }, []);
+
   const handleStart = () => {
     setGameState("playing");
     setReaction("Listen carefully, then spell the missing word.");
@@ -119,7 +129,7 @@ export default function Home() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (showResult || !currentWord || !userInput.trim() || isProcessing) return;
 
     stopAudioPlayback();
@@ -146,44 +156,22 @@ export default function Home() {
       triggerConfetti();
     }
 
-    // Generate reaction - try API first, fallback to templates
+    // Generate reaction from templates
     let comment = "";
     let type: ReactionType;
 
-    try {
-      const reactionResponse = await fetch("/api/generate-reaction", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetWord: currentWord.word,
-          userAnswer: userInput.trim(),
-          accuracy,
-          meaning: currentWord.meaning,
-        }),
-      });
-
-      if (reactionResponse.ok) {
-        const data = await reactionResponse.json();
-        comment = data.message;
-        type = data.reactionType as ReactionType;
-      } else {
-        throw new Error("API failed");
-      }
-    } catch {
-      // Fallback to template comments
-      if (isPerfect) {
-        comment = PERFECT_COMMENTS[Math.floor(Math.random() * PERFECT_COMMENTS.length)];
-        type = "perfect";
-      } else if (accuracy >= SCORE_THRESHOLDS.EXCELLENT) {
-        comment = EXCELLENT_COMMENTS[Math.floor(Math.random() * EXCELLENT_COMMENTS.length)];
-        type = "base";
-      } else if (accuracy >= SCORE_THRESHOLDS.GOOD) {
-        comment = GOOD_COMMENTS[Math.floor(Math.random() * GOOD_COMMENTS.length)];
-        type = getRandomReaction(GOOD_REACTIONS);
-      } else {
-        comment = BAD_COMMENTS[Math.floor(Math.random() * BAD_COMMENTS.length)];
-        type = getRandomReaction(BAD_REACTIONS);
-      }
+    if (isPerfect) {
+      comment = PERFECT_COMMENTS[Math.floor(Math.random() * PERFECT_COMMENTS.length)];
+      type = "perfect";
+    } else if (accuracy >= SCORE_THRESHOLDS.EXCELLENT) {
+      comment = EXCELLENT_COMMENTS[Math.floor(Math.random() * EXCELLENT_COMMENTS.length)];
+      type = "base";
+    } else if (accuracy >= SCORE_THRESHOLDS.GOOD) {
+      comment = GOOD_COMMENTS[Math.floor(Math.random() * GOOD_COMMENTS.length)];
+      type = getRandomReaction(GOOD_REACTIONS);
+    } else {
+      comment = BAD_COMMENTS[Math.floor(Math.random() * BAD_COMMENTS.length)];
+      type = getRandomReaction(BAD_REACTIONS);
     }
 
     setReaction(comment);
