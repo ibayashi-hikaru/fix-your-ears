@@ -409,7 +409,7 @@ export const TOTAL_WORDS_PER_GAME = 5;
 export function getTodaysWords(): WordItem[] {
   const now = new Date();
   // Use UTC date to avoid timezone issues
-  const startDate = new Date("2026-06-01");
+  const startDate = new Date("2026-06-03");
   const diffTime = now.getTime() - startDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   const dayIndex = ((diffDays % DAILY_WORDS.length) + DAILY_WORDS.length) % DAILY_WORDS.length;

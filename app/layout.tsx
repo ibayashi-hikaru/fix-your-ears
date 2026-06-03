@@ -15,8 +15,9 @@ const mPlusRounded1c = M_PLUS_Rounded_1c({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.fix-your-ears.app"),
   title: "Fix Your Ears",
-  description: "A Spicy Spelling Challenge - Can you spell what you hear?",
+  description: "A Spicy Listening Challenge - Can you spell what you hear?",
   icons: {
     icon: "/images/favicon.jpeg",
     shortcut: "/images/favicon.jpeg",
