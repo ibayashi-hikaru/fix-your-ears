@@ -342,7 +342,7 @@ export default function Home() {
                 className={`px-3 py-2 ${isThoughtBubble(finalReactionType) ? "rounded-[50px]" : "rounded-lg"}`}
                 style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
               >
-                <p className="text-xs font-semibold text-[#5E5E5E]">
+                <p className="text-xs font-semibold text-[#5E5E5E] text-center">
                   {finalComment}
                 </p>
               </div>
@@ -442,7 +442,7 @@ export default function Home() {
               className={`px-3 py-2 ${isThoughtBubble(reactionType) ? "rounded-[50px]" : "rounded-lg"}`}
               style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
             >
-              <p className="text-xs font-semibold text-[#5E5E5E]">
+              <p className="text-xs font-semibold text-[#5E5E5E] text-center">
                 {reaction}
               </p>
             </div>

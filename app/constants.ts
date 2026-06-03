@@ -419,8 +419,8 @@ export function getTodaysWords(): WordItem[] {
 // Score thresholds for spelling accuracy
 export const SCORE_THRESHOLDS = {
   PERFECT: 100,
-  EXCELLENT: 85,
-  GOOD: 60,
+  EXCELLENT: 98,
+  GOOD: 71,
   PASSING: 40,
 } as const;
 
@@ -486,7 +486,7 @@ export const EXCELLENT_COMMENTS = [
 ];
 
 export const GOOD_COMMENTS = [
-  "Did you hear the same sentence I played?",
+  "Did you hear what I just said?",
   "Fix your ears. Seriously.",
   "Your ears are playing tricks on you.",
   "Were you listening or daydreaming?",
