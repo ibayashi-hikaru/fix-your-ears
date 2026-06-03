@@ -327,22 +327,14 @@ export default function Home() {
             className="h-20 object-contain mb-4 animate-pop-in"
           />
 
-          {/* Average Score */}
-          <div className={`text-center mb-3 animate-score-pop`}>
-            <div className="text-xs text-gray-400 font-semibold">Average Score</div>
-            <div className={`text-4xl font-bold ${getScoreColorClass(convertToScore10(averageScore))}`}>
-              {convertToScore10(averageScore)}
-            </div>
-          </div>
-
           {/* Character + Speech Bubble */}
-          <div className="flex items-center gap-1 w-full max-w-md mb-4 animate-pop-in delay-100">
+          <div className="flex items-center gap-2 w-full max-w-md mb-4 animate-pop-in">
             <div className="flex-1 min-w-0 relative">
               <div
-                className={`px-3 py-2 ${isThoughtBubble(finalReactionType) ? "rounded-[50px]" : "rounded-lg"}`}
+                className={`px-4 py-3 ${isThoughtBubble(finalReactionType) ? "rounded-[50px]" : "rounded-lg"}`}
                 style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
               >
-                <p className="text-xs font-semibold text-[#5E5E5E] text-center">
+                <p className="text-sm font-semibold text-[#5E5E5E] text-center">
                   {finalComment}
                 </p>
               </div>
@@ -360,7 +352,7 @@ export default function Home() {
               alt="Character"
               width={160}
               height={160}
-              className="w-36 h-36 object-contain flex-shrink-0 animate-character"
+              className="w-44 h-44 object-contain flex-shrink-0 animate-character"
             />
           </div>
 
@@ -383,7 +375,7 @@ export default function Home() {
           <div className="flex items-center gap-3 animate-slide-up delay-300">
             <button
               onClick={handleRestart}
-              className="btn-glossy btn-green text-sm px-6 py-2.5"
+              className="btn-glossy btn-green !text-xs !px-4 !py-1.5 !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
             >
               Play Again
             </button>
@@ -397,11 +389,10 @@ export default function Home() {
                 const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
                 window.open(twitterUrl, '_blank', 'width=550,height=420');
               }}
-              className="btn-glossy text-sm px-6 py-2.5"
+              className="btn-glossy !text-xs !px-4 !py-1.5 !shadow-[0px_2px_0px_#5E5E5E] !rounded-full"
               style={{
                 background: '#000000',
                 color: 'white',
-                boxShadow: '0px 3px 0px #5E5E5E',
               }}
             >
               Share on X
