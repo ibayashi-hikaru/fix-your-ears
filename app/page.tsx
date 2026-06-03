@@ -491,7 +491,7 @@ export default function Home() {
                       }}
                       placeholder="???"
                       disabled={isProcessing}
-                      className="inline-block border-2 border-[#5E5E5E] bg-white text-[#5E5E5E] outline-none text-center font-bold mx-1 w-[130px] rounded-none px-1 text-sm"
+                      className="inline-block border-2 border-[#5E5E5E] bg-white text-[#5E5E5E] outline-none text-center font-bold mx-1 w-[130px] rounded-none px-1 text-base"
                       autoComplete="off"
                       autoCapitalize="off"
                       spellCheck={false}
