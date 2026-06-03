@@ -27,6 +27,8 @@ import {
   generateDiff,
   getScoreColorClass,
   createSentenceWithBlank,
+  playCorrectSound,
+  playIncorrectSound,
 } from "./utils";
 
 type GameState = "start" | "playing" | "finished";
@@ -154,6 +156,11 @@ export default function Home() {
     if (isPerfect) {
       setPerfectCount((prev) => prev + 1);
       triggerConfetti();
+      playCorrectSound();
+    } else if (accuracy >= SCORE_THRESHOLDS.EXCELLENT) {
+      playCorrectSound();
+    } else {
+      playIncorrectSound();
     }
 
     // Generate reaction from templates
@@ -322,7 +329,7 @@ export default function Home() {
                 className={`px-4 py-3 ${isThoughtBubble(finalReactionType) ? "rounded-[50px]" : "rounded-lg"}`}
                 style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
               >
-                <p className="text-sm font-semibold text-[#5E5E5E] text-center">
+                <p className="text-base font-semibold text-[#5E5E5E] text-center">
                   {finalComment}
                 </p>
               </div>
@@ -421,7 +428,7 @@ export default function Home() {
               className={`px-3 py-2 ${isThoughtBubble(reactionType) ? "rounded-[50px]" : "rounded-lg"}`}
               style={{ background: '#FFFFFF', boxShadow: '0px 3px 0px #5E5E5E', border: '2px solid #5E5E5E' }}
             >
-              <p className="text-xs font-semibold text-[#5E5E5E] text-center">
+              <p className="text-base font-semibold text-[#5E5E5E] text-center">
                 {reaction}
               </p>
             </div>

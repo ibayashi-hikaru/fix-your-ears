@@ -1,5 +1,38 @@
 import confetti from "canvas-confetti";
 
+// Sound effects using Web Audio API
+export function playCorrectSound() {
+  const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = "sine";
+  gain.gain.value = 0.3;
+  // Two-note chime (C5 → E5)
+  osc.frequency.setValueAtTime(523, ctx.currentTime);
+  osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+export function playIncorrectSound() {
+  const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = "sine";
+  gain.gain.value = 0.25;
+  // Low descending tone (E4 → C4)
+  osc.frequency.setValueAtTime(330, ctx.currentTime);
+  osc.frequency.setValueAtTime(262, ctx.currentTime + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.35);
+}
+
 // Trigger confetti animation
 export const triggerConfetti = () => {
   const duration = 3 * 1000;
