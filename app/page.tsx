@@ -469,8 +469,7 @@ export default function Home() {
                       }}
                       placeholder="???"
                       disabled={isProcessing}
-                      className="inline-block border-b-2 border-dashed border-[#4DC7FF] bg-transparent outline-none text-center font-bold text-[#5E5E5E] mx-1"
-                      style={{ width: `${Math.max(60, userInput.length * 12 + 30)}px` }}
+                      className="inline-block border-b-2 border-dashed border-[#4DC7FF] bg-transparent outline-none text-center font-bold text-[#5E5E5E] mx-1 w-[160px]"
                       autoComplete="off"
                       autoCapitalize="off"
                       spellCheck={false}
@@ -531,19 +530,17 @@ export default function Home() {
                     </span>
                   </div>
                 )}
-                <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                   <div className="text-sm text-gray-400">{currentWord.ja}</div>
+                  <button
+                    onClick={handleNext}
+                    className="btn-glossy btn-gray !py-1 !px-3 !text-xs !shadow-[0px_2px_0px_#5E5E5E] !rounded-full flex-shrink-0 ml-2"
+                  >
+                    {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next →" : "Results →"}
+                  </button>
                 </div>
               </div>
             )}
-
-            {/* Next Button */}
-            <button
-              onClick={handleNext}
-              className="btn-glossy btn-blue w-full text-sm py-2.5 animate-slide-up delay-300"
-            >
-              {currentWordIndex < TOTAL_WORDS_PER_GAME - 1 ? "Next Round" : "See Results"}
-            </button>
           </div>
         )}
       </div>
