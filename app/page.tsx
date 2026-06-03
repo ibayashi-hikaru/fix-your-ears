@@ -23,6 +23,7 @@ import {
 import {
   triggerConfetti,
   calculateSpellingScore,
+  convertToScore10,
   generateDiff,
   getScoreColorClass,
   createSentenceWithBlank,
@@ -208,11 +209,11 @@ export default function Home() {
       let comment = "";
       let type: ReactionType;
 
-      if (finalAvg >= SCORE_THRESHOLDS.EXCELLENT) {
+      if (finalAvg === 100) {
         comment = FINAL_EXCELLENT_COMMENTS[Math.floor(Math.random() * FINAL_EXCELLENT_COMMENTS.length)];
         type = "perfect";
         triggerConfetti();
-      } else if (finalAvg >= SCORE_THRESHOLDS.GOOD) {
+      } else if (finalAvg >= SCORE_THRESHOLDS.EXCELLENT) {
         comment = FINAL_GOOD_COMMENTS[Math.floor(Math.random() * FINAL_GOOD_COMMENTS.length)];
         type = "base";
       } else {
@@ -329,8 +330,8 @@ export default function Home() {
           {/* Average Score */}
           <div className={`text-center mb-3 animate-score-pop`}>
             <div className="text-xs text-gray-400 font-semibold">Average Score</div>
-            <div className={`text-4xl font-bold ${getScoreColorClass(averageScore)}`}>
-              {averageScore.toFixed(0)}%
+            <div className={`text-4xl font-bold ${getScoreColorClass(convertToScore10(averageScore))}`}>
+              {convertToScore10(averageScore)}
             </div>
           </div>
 
@@ -371,8 +372,8 @@ export default function Home() {
                 className="flex items-center justify-between py-1.5 border-b border-gray-200 last:border-b-0"
               >
                 <span className="text-sm font-bold text-[#5E5E5E]">{round.word}</span>
-                <span className={`text-sm font-bold ${getScoreColorClass(round.accuracy)}`}>
-                  {round.accuracy}%
+                <span className={`text-sm font-bold ${getScoreColorClass(convertToScore10(round.accuracy))}`}>
+                  {convertToScore10(round.accuracy)}
                 </span>
               </div>
             ))}
@@ -507,8 +508,8 @@ export default function Home() {
             {currentWord && (
               <div className="result-card w-full animate-slide-up">
                 {/* Score line */}
-                <div className={`text-sm font-bold mb-2 animate-score-pop ${getScoreColorClass(currentAccuracy ?? 0)}`}>
-                  Score: {currentAccuracy !== null ? currentAccuracy : "--"} out of 100
+                <div className={`text-sm font-bold mb-2 animate-score-pop ${getScoreColorClass(currentAccuracy !== null ? convertToScore10(currentAccuracy) : 0)}`}>
+                  Score: {currentAccuracy !== null ? convertToScore10(currentAccuracy) : "--"} / 10
                 </div>
                 {/* Correct/Yours */}
                 <div className="flex items-baseline gap-2">

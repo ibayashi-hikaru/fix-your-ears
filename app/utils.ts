@@ -133,11 +133,21 @@ export function generateDiff(userInput: string, correctWord: string): {
   return { userDiff, correctDiff };
 }
 
-// Get score color class
-export function getScoreColorClass(score: number): string {
-  if (score === 100) return "score-perfect";
-  if (score >= 85) return "score-excellent";
-  if (score >= 60) return "score-good";
+// Convert 0-100 score to 0-10 with harsh curve
+// Only perfect (100) gets 10. Very hard to score above 7.
+// 100->10, 95->7.4, 90->5.9, 85->4.8, 80->4.0, 70->2.8, 60->1.9, 50->1.3
+export function convertToScore10(score100: number): number {
+  if (score100 === 100) return 10;
+  if (score100 <= 0) return 0;
+  const score10 = Math.pow(score100 / 100, 3) * 10;
+  return Math.round(score10 * 10) / 10;
+}
+
+// Get score color class (based on 10-point scale)
+export function getScoreColorClass(score10: number): string {
+  if (score10 === 10) return "score-perfect";
+  if (score10 >= 7) return "score-excellent";
+  if (score10 >= 4) return "score-good";
   return "score-bad";
 }
 
