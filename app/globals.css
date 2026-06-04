@@ -25,14 +25,6 @@ body {
   font-weight: 500;
 }
 
-body:not(.hydrated) {
-  visibility: hidden;
-}
-
-body.hydrated {
-  visibility: visible;
-}
-
 /* Standard button base styles */
 .btn-glossy {
   border-radius: 8px;
