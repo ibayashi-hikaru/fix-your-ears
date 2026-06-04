@@ -379,8 +379,7 @@ export default function Home() {
                 const today = new Date();
                 const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
                 const avgScore = convertToScore10(averageScore);
-                const roundScores = roundResults.map((r, i) => `R${i + 1}: ${convertToScore10(r.accuracy)}`).join(" | ");
-                const shareText = `Fix Your Ears! — ${dateStr}\n\n👂 Average: ${avgScore}/10\n${roundScores}\n\n👩‍🏫 "${finalComment || ''}"\n\n#FixYourEars\nCreated by Hikaru (@hhp_hikaru)\nhttps://www.fix-your-ears.app`;
+                const shareText = `Fix Your Ears! — ${dateStr}\n\n👂 Average: ${avgScore}/10\n\n👩‍🏫 "${finalComment || ''}"\n\n#FixYourEars\nhttps://www.fix-your-ears.app`;
                 const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
                 window.open(twitterUrl, '_blank', 'width=550,height=420');
               }}
