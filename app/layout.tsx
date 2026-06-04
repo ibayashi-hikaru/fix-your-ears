@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Fix Your Ears",
-    description: "A Spicy Spelling Challenge - Can you spell what you hear?",
+    description: "A Spicy Listening Challenge - Can you spell what you hear?",
     images: [
       {
         url: "/images/thumbnail.jpeg?v=3",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Fix Your Ears",
-    description: "A Spicy Spelling Challenge - Can you spell what you hear?",
+    description: "A Spicy Listening Challenge - Can you spell what you hear?",
     images: ["/images/thumbnail.jpeg?v=3"],
   },
 };
