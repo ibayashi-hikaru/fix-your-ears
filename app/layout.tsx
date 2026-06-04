@@ -53,7 +53,9 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${fredoka.variable} ${mPlusRounded1c.variable} antialiased`}
+        suppressHydrationWarning
       >
+        <script dangerouslySetInnerHTML={{ __html: `document.body.classList.add('hydrated')` }} />
         {children}
       </body>
     </html>
